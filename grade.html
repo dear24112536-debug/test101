@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>โปรแกรมคำนวณเกรดนักเรียน</title>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Chart.js via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: #e2f0e2; /* โทนสีเขียวอ่อนสำหรับพื้นหลัง */
+        }
+        .container {
+            max-width: 1200px;
+        }
+        table {
+            border-collapse: separate;
+            border-spacing: 0 0.5rem;
+        }
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+        }
+        thead th {
+            background-color: #2e592e; /* สีเขียวเข้มสำหรับหัวตาราง */
+            color: white;
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+        }
+        tbody tr {
+            background-color: white;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        tbody tr:nth-child(odd) {
+            background-color: #f6fdf6; /* ลายแถบสีอ่อน */
+        }
+        .grade-a { background-color: #d1fae5; color: #065f46; } /* เขียว */
+        .grade-b { background-color: #dbeafe; color: #1e40af; } /* น้ำเงิน */
+        .grade-c { background-color: #fef3c7; color: #b45309; } /* ส้ม */
+        .grade-d { background-color: #fee2e2; color: #991b1b; } /* แดงอ่อน */
+        .grade-f { background-color: #fecaca; color: #7f1d1d; } /* แดง */
+        .text-center { text-align: center; }
+        .rounded-lg { border-radius: 0.5rem; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="container mx-auto">
+        <header class="bg-white p-6 rounded-xl shadow-lg mb-8 text-center">
+            <h1 class="text-4xl font-extrabold text-[#2e592e] tracking-wide">
+                ระบบตัดเกรด
+            </h1>
+            <p class="text-gray-500 mt-2">โปรแกรมคำนวณเกรดสำหรับนักเรียน</p>
+        </header>
+        
+        <!-- ส่วนแสดงผลภาพรวมและกราฟ -->
+        <div class="bg-white p-6 rounded-lg shadow-lg mb-8">
+            <h2 class="text-2xl font-semibold mb-4 text-[#2e592e]">ภาพรวมข้อมูล</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                <!-- Card แสดงจำนวนนักเรียนทั้งหมด -->
+                <div class="bg-gray-100 p-4 rounded-md shadow-sm">
+                    <p class="text-sm text-gray-500">จำนวนนักเรียนทั้งหมด</p>
+                    <p id="totalStudentsCard" class="text-3xl font-bold text-[#2e592e]"></p>
+                </div>
+                <!-- Card แสดงคะแนนเฉลี่ยรวม -->
+                <div class="bg-gray-100 p-4 rounded-md shadow-sm">
+                    <p class="text-sm text-gray-500">คะแนนเฉลี่ยรวม</p>
+                    <p id="averageScoreCard" class="text-3xl font-bold text-[#2e592e]"></p>
+                </div>
+                <!-- Card แสดงคะแนนเฉลี่ยรายเกรด -->
+                <div class="bg-gray-100 p-4 rounded-md shadow-sm">
+                    <p class="text-sm text-gray-500">คะแนนเฉลี่ยรายเกรด</p>
+                    <p id="averageGradeScoreCard" class="text-sm font-semibold text-gray-700"></p>
+                </div>
+            </div>
+            
+            <!-- ส่วนของกราฟ -->
+            <div>
+                <canvas id="gradeChart"></canvas>
+            </div>
+        </div>
+
+        <!-- ส่วนฟอร์มสำหรับเพิ่มนักเรียนและตั้งค่าน้ำหนัก -->
+        <div class="bg-white p-6 rounded-lg shadow-lg mb-8">
+            <h2 class="text-2xl font-semibold mb-4 text-[#2e592e]">เพิ่มนักเรียนและตั้งค่า</h2>
+            
+            <!-- ฟอร์มสำหรับตั้งค่าน้ำหนักคะแนน -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between mb-4 space-y-4 md:space-y-0">
+                <div class="flex items-center space-x-2">
+                    <label for="workWeightInput" class="text-gray-600 font-medium">น้ำหนักคะแนนเก็บ:</label>
+                    <input type="number" id="workWeightInput" value="0.6" step="0.1" min="0" max="1" class="w-24 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#2e592e] text-center">
+                </div>
+                <div class="flex items-center space-x-2">
+                    <label for="examWeightInput" class="text-gray-600 font-medium">น้ำหนักคะแนนสอบ:</label>
+                    <input type="number" id="examWeightInput" value="0.4" step="0.1" min="0" max="1" class="w-24 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#2e592e] text-center">
+                </div>
+            </div>
+
+            <!-- ฟอร์มสำหรับเพิ่มข้อมูลนักเรียน -->
+            <form id="addStudentForm" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <div class="col-span-1 md:col-span-1">
+                    <label for="nameInput" class="block text-sm font-medium text-gray-700">ชื่อนักเรียน:</label>
+                    <input type="text" id="nameInput" placeholder="ชื่อ" required class="mt-1 p-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#2e592e]">
+                </div>
+                <div class="col-span-1 md:col-span-1">
+                    <label for="workScoreInput" class="block text-sm font-medium text-gray-700">คะแนนเก็บ:</label>
+                    <input type="number" id="workScoreInput" placeholder="0-100" min="0" max="100" required class="mt-1 p-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#2e592e]">
+                </div>
+                <div class="col-span-1 md:col-span-1">
+                    <label for="examScoreInput" class="block text-sm font-medium text-gray-700">คะแนนสอบ:</label>
+                    <input type="number" id="examScoreInput" placeholder="0-100" min="0" max="100" required class="mt-1 p-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#2e592e]">
+                </div>
+                <div class="col-span-1 md:col-span-1">
+                    <button type="submit" class="w-full bg-[#3c783c] text-white font-bold py-2 px-4 rounded-md shadow-md hover:bg-[#2e592e] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#2e592e]">
+                        เพิ่มนักเรียน
+                    </button>
+                </div>
+            </form>
+            
+            <!-- กล่องข้อความสำหรับแจ้งเตือน -->
+            <div id="messageBox" class="mt-4 p-4 rounded-md hidden"></div>
+        </div>
+        
+        <!-- ส่วนปุ่มและตารางแสดงผลลัพธ์ -->
+        <div class="bg-white p-6 rounded-lg shadow-lg">
+            <h2 class="text-2xl font-semibold mb-4 text-[#2e592e]">ผลการคำนวณเกรด</h2>
+            <div class="flex flex-col md:flex-row md:items-center justify-between mb-4 space-y-4 md:space-y-0 md:space-x-4">
+                <p id="totalStudents" class="text-gray-600 font-medium"></p>
+                <div class="flex space-x-4 w-full md:w-auto">
+                    <button id="calculateAllBtn" class="w-full md:w-auto bg-[#3c783c] text-white font-bold py-2 px-4 rounded-md shadow-md hover:bg-[#2e592e] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#2e592e]">
+                        คำนวณเกรดทั้งหมด
+                    </button>
+                    <button id="exportCsvBtn" class="w-full md:w-auto bg-gray-600 text-white font-bold py-2 px-4 rounded-md shadow-md hover:bg-gray-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500">
+                        ส่งออก CSV
+                    </button>
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto rounded-lg shadow-md">
+                <table class="w-full text-sm text-gray-500 dark:text-gray-400">
+                    <thead class="text-xs uppercase text-white bg-gray-700">
+                        <tr>
+                            <th scope="col" class="py-3 px-6 rounded-tl-lg">#</th>
+                            <th scope="col" class="py-3 px-6">ชื่อ</th>
+                            <th scope="col" class="py-3 px-6">คะแนนเก็บ</th>
+                            <th scope="col" class="py-3 px-6">คะแนนสอบ</th>
+                            <th scope="col" class="py-3 px-6">คะแนนรวม</th>
+                            <th scope="col" class="py-3 px-6 rounded-tr-lg">เกรด</th>
+                            <th scope="col" class="py-3 px-6">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentTableBody" class="divide-y divide-gray-200">
+                        <!-- Student data will be inserted here by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <div id="noDataMessage" class="mt-4 text-center text-gray-500 hidden">
+                ยังไม่มีข้อมูลนักเรียน. กรุณาเพิ่มนักเรียน
+            </div>
+        </div>
+    </div>
+    
+    <!-- ส่วนของ JavaScript -->
+    <script>
+        // กำหนดข้อมูลเกรดเบื้องต้น
+        const GRADE_RANGES = [
+            { grade: 'A', min: 90 },
+            { grade: 'B', min: 80 },
+            { grade: 'C', min: 70 },
+            { grade: 'D', min: 60 },
+            { grade: 'F', min: 0 }
+        ];
+
+        // กำหนดค่าเริ่มต้นของน้ำหนักคะแนน
+        let workWeight = 0.6;
+        let examWeight = 0.4;
+        
+        // ตัวแปรสำหรับเก็บ instance ของกราฟ
+        let gradeChartInstance = null;
+        
+        // กำหนดตัวแปรสำหรับ DOM elements
+        const workWeightInput = document.getElementById('workWeightInput');
+        const examWeightInput = document.getElementById('examWeightInput');
+        const addStudentForm = document.getElementById('addStudentForm');
+        const studentTableBody = document.getElementById('studentTableBody');
+        const calculateAllBtn = document.getElementById('calculateAllBtn');
+        const exportCsvBtn = document.getElementById('exportCsvBtn');
+        const totalStudentsEl = document.getElementById('totalStudents');
+        const noDataMessage = document.getElementById('noDataMessage');
+        const messageBox = document.getElementById('messageBox');
+        const totalStudentsCard = document.getElementById('totalStudentsCard');
+        const averageScoreCard = document.getElementById('averageScoreCard');
+        const averageGradeScoreCard = document.getElementById('averageGradeScoreCard');
+        const gradeChartCanvas = document.getElementById('gradeChart');
+
+        // ข้อมูลนักเรียนที่เก็บในหน่วยความจำ
+        let students = [];
+
+        // ฟังก์ชันสำหรับแสดงข้อความแจ้งเตือน (แทน alert)
+        function showMessage(message, type = 'info') {
+            messageBox.textContent = message;
+            messageBox.classList.remove('hidden', 'bg-red-200', 'text-red-800', 'bg-blue-200', 'text-blue-800');
+            if (type === 'error') {
+                messageBox.classList.add('bg-red-200', 'text-red-800');
+            } else {
+                messageBox.classList.add('bg-blue-200', 'text-blue-800');
+            }
+            setTimeout(() => {
+                messageBox.classList.add('hidden');
+            }, 3000);
+        }
+
+        // ฟังก์ชันสำหรับคำนวณเกรดจากคะแนนรวม
+        function calculateGrade(totalScore) {
+            for (const range of GRADE_RANGES) {
+                if (totalScore >= range.min) {
+                    return range.grade;
+                }
+            }
+            return 'F'; // กรณีคะแนนต่ำกว่า 0
+        }
+
+        // ฟังก์ชันสำหรับบันทึกข้อมูลนักเรียนลงใน localStorage
+        function saveStudentsToLocalStorage() {
+            localStorage.setItem('students', JSON.stringify(students));
+        }
+
+        // ฟังก์ชันสำหรับโหลดข้อมูลนักเรียนจาก localStorage
+        function loadStudentsFromLocalStorage() {
+            const storedStudents = localStorage.getItem('students');
+            if (storedStudents) {
+                students = JSON.parse(storedStudents);
+            } else {
+                // ตัวอย่างข้อมูลนักเรียน 5 คน (ตามข้อกำหนด)
+                students = [
+                    { name: 'สมชาย ใจดี', workScore: 85, examScore: 92 },
+                    { name: 'สมหญิง รักเรียน', workScore: 78, examScore: 85 },
+                    { name: 'มานะ มานะ', workScore: 95, examScore: 88 },
+                    { name: 'สุดา ขยันยิ่ง', workScore: 65, examScore: 70 },
+                    { name: 'ศักดิ์สิทธิ์ ง่วงนอน', workScore: 50, examScore: 55 }
+                ];
+            }
+        }
+        
+        // ฟังก์ชันสำหรับแสดงข้อมูลในตารางและอัปเดตสรุปภาพรวม
+        function renderTableAndSummary() {
+            studentTableBody.innerHTML = ''; // ล้างข้อมูลเก่าในตาราง
+            
+            if (students.length === 0) {
+                noDataMessage.classList.remove('hidden');
+                totalStudentsEl.textContent = 'จำนวนนักเรียน: 0';
+                totalStudentsCard.textContent = '0';
+                averageScoreCard.textContent = '0.00';
+                averageGradeScoreCard.innerHTML = '-';
+                // ทำลายกราฟเก่าถ้ามี
+                if (gradeChartInstance) {
+                    gradeChartInstance.destroy();
+                }
+                return;
+            } else {
+                noDataMessage.classList.add('hidden');
+            }
+            
+            let totalOverallScore = 0;
+            const gradeCounts = { 'A': 0, 'B': 0, 'C': 0, 'D': 0, 'F': 0 };
+            const gradeTotalScores = { 'A': 0, 'B': 0, 'C': 0, 'D': 0, 'F': 0 };
+
+            students.forEach((student, index) => {
+                const totalScore = parseFloat(((student.workScore * workWeight) + (student.examScore * examWeight)).toFixed(2));
+                const grade = calculateGrade(totalScore);
+                
+                totalOverallScore += totalScore;
+                gradeCounts[grade]++;
+                gradeTotalScores[grade] += totalScore;
+
+                let gradeClass = '';
+                switch(grade) {
+                    case 'A': gradeClass = 'grade-a'; break;
+                    case 'B': gradeClass = 'grade-b'; break;
+                    case 'C': gradeClass = 'grade-c'; break;
+                    case 'D': gradeClass = 'grade-d'; break;
+                    case 'F': gradeClass = 'grade-f'; break;
+                }
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-6 py-4">${index + 1}</td>
+                    <td class="px-6 py-4 font-medium text-gray-900">${student.name}</td>
+                    <td class="px-6 py-4">${student.workScore}</td>
+                    <td class="px-6 py-4">${student.examScore}</td>
+                    <td class="px-6 py-4 font-bold text-gray-900">${totalScore}</td>
+                    <td class="px-6 py-4 text-center font-bold ${gradeClass} rounded-lg">${grade}</td>
+                    <td class="px-6 py-4">
+                        <button onclick="deleteStudent(${index})" class="bg-red-500 text-white p-2 rounded-md hover:bg-red-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500">
+                            ลบ
+                        </button>
+                    </td>
+                `;
+                studentTableBody.appendChild(row);
+            });
+
+            // อัปเดตข้อมูลใน cards
+            const averageOverallScore = totalOverallScore / students.length || 0;
+            totalStudentsCard.textContent = students.length;
+            averageScoreCard.textContent = averageOverallScore.toFixed(2);
+
+            // อัปเดตคะแนนเฉลี่ยรายเกรดใน card
+            let gradeAveragesHtml = '';
+            for (const grade of Object.keys(gradeCounts).reverse()) {
+                const count = gradeCounts[grade];
+                const totalScore = gradeTotalScores[grade];
+                const averageScore = count > 0 ? (totalScore / count).toFixed(2) : '-';
+                gradeAveragesHtml += `<span class="inline-block mr-2">${grade}: ${averageScore}</span>`;
+            }
+            averageGradeScoreCard.innerHTML = gradeAveragesHtml;
+
+            // เรียกฟังก์ชันวาดกราฟ
+            renderChart(gradeCounts);
+            
+            totalStudentsEl.textContent = `จำนวนนักเรียน: ${students.length}`;
+        }
+        
+        // ฟังก์ชันสำหรับวาดกราฟ
+        function renderChart(gradeCounts) {
+            // ทำลายกราฟเก่าถ้ามีอยู่แล้ว
+            if (gradeChartInstance) {
+                gradeChartInstance.destroy();
+            }
+
+            const ctx = gradeChartCanvas.getContext('2d');
+            gradeChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['A', 'B', 'C', 'D', 'F'],
+                    datasets: [{
+                        label: 'จำนวนนักเรียน',
+                        data: [gradeCounts['A'], gradeCounts['B'], gradeCounts['C'], gradeCounts['D'], gradeCounts['F']],
+                        backgroundColor: [
+                            'rgba(6, 95, 70, 0.6)',    // A
+                            'rgba(30, 64, 175, 0.6)',  // B
+                            'rgba(180, 83, 9, 0.6)',   // C
+                            'rgba(153, 27, 27, 0.6)',  // D
+                            'rgba(127, 29, 29, 0.6)'   // F
+                        ],
+                        borderColor: [
+                            'rgba(6, 95, 70, 1)',
+                            'rgba(30, 64, 175, 1)',
+                            'rgba(180, 83, 9, 1)',
+                            'rgba(153, 27, 27, 1)',
+                            'rgba(127, 29, 29, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'จำนวนนักเรียน'
+                            },
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: 'การกระจายเกรด',
+                            font: {
+                                size: 16,
+                                family: 'Sarabun'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // ฟังก์ชันสำหรับเพิ่มนักเรียน
+        addStudentForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const name = document.getElementById('nameInput').value.trim();
+            const workScore = parseFloat(document.getElementById('workScoreInput').value);
+            const examScore = parseFloat(document.getElementById('examScoreInput').value);
+
+            if (name && !isNaN(workScore) && !isNaN(examScore) && workScore >= 0 && workScore <= 100 && examScore >= 0 && examScore <= 100) {
+                const newStudent = {
+                    name: name,
+                    workScore: workScore,
+                    examScore: examScore
+                };
+                students.push(newStudent);
+                saveStudentsToLocalStorage();
+                renderTableAndSummary();
+                addStudentForm.reset(); // ล้างฟอร์ม
+            } else {
+                showMessage('กรุณากรอกข้อมูลให้ครบถ้วนและถูกต้อง (คะแนนระหว่าง 0-100)', 'error');
+            }
+        });
+
+        // ฟังก์ชันสำหรับลบนักเรียน
+        function deleteStudent(index) {
+            students.splice(index, 1);
+            saveStudentsToLocalStorage();
+            renderTableAndSummary();
+        }
+
+        // ฟังก์ชันสำหรับคำนวณเกรดทั้งหมด
+        calculateAllBtn.addEventListener('click', () => {
+            renderTableAndSummary();
+        });
+
+        // ฟังก์ชันสำหรับส่งออกข้อมูลเป็นไฟล์ CSV
+        function exportToCsv() {
+            if (students.length === 0) {
+                showMessage('ไม่มีข้อมูลนักเรียนที่จะส่งออก', 'error');
+                return;
+            }
+
+            // สร้างหัวตาราง CSV
+            let csvContent = "ลำดับ,ชื่อ,คะแนนเก็บ,คะแนนสอบ,คะแนนรวม,เกรด\n";
+            
+            // วนลูปเพื่อสร้างข้อมูลแต่ละแถว
+            students.forEach((student, index) => {
+                const totalScore = parseFloat(((student.workScore * workWeight) + (student.examScore * examWeight)).toFixed(2));
+                const grade = calculateGrade(totalScore);
+                // นำข้อมูลแต่ละคอลัมน์มาต่อกันด้วย comma
+                csvContent += `${index + 1},"${student.name}",${student.workScore},${student.examScore},${totalScore},${grade}\n`;
+            });
+            
+            // สร้าง Blob จากข้อมูล CSV
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            
+            // สร้าง URL และลิงก์สำหรับดาวน์โหลด
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'grade_report.csv');
+            
+            // จำลองการคลิกเพื่อดาวน์โหลด
+            document.body.appendChild(link);
+            link.click();
+            
+            // ลบลิงก์ที่สร้างขึ้นมา
+            document.body.removeChild(link);
+            showMessage('ส่งออกไฟล์ CSV เรียบร้อยแล้ว');
+        }
+
+        // Event listener สำหรับปุ่มส่งออก CSV
+        exportCsvBtn.addEventListener('click', exportToCsv);
+
+        // Event listener สำหรับการเปลี่ยนค่าน้ำหนักคะแนน
+        workWeightInput.addEventListener('change', () => {
+            const newWorkWeight = parseFloat(workWeightInput.value);
+            if (!isNaN(newWorkWeight) && newWorkWeight >= 0 && newWorkWeight <= 1) {
+                workWeight = newWorkWeight;
+                examWeight = parseFloat((1 - newWorkWeight).toFixed(1));
+                examWeightInput.value = examWeight;
+                renderTableAndSummary();
+            } else {
+                showMessage('กรุณาป้อนค่าน้ำหนักระหว่าง 0.0 - 1.0', 'error');
+            }
+        });
+        
+        examWeightInput.addEventListener('change', () => {
+            const newExamWeight = parseFloat(examWeightInput.value);
+            if (!isNaN(newExamWeight) && newExamWeight >= 0 && newExamWeight <= 1) {
+                examWeight = newExamWeight;
+                workWeight = parseFloat((1 - newExamWeight).toFixed(1));
+                workWeightInput.value = workWeight;
+                renderTableAndSummary();
+            } else {
+                showMessage('กรุณาป้อนค่าน้ำหนักระหว่าง 0.0 - 1.0', 'error');
+            }
+        });
+
+        // โหลดข้อมูลและแสดงผลเมื่อหน้าเว็บโหลดเสร็จ
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStudentsFromLocalStorage();
+            renderTableAndSummary();
+        });
+    </script>
+</body>
+</html>
